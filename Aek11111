@@ -1,0 +1,148 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "MM2 Script",
+   LoadingTitle = "MM2 Hub",
+   LoadingSubtitle = "โดย AI GIMINI",
+   ConfigurationSaving = {
+      Enabled = false
+   }
+})
+
+local Tab = Window:CreateTab("الميزات (ฟังชั่น)", 4483362458)
+
+-- ตัวแปรระบบ
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local SpeedEnabled = false
+local SpeedValue = 16
+local HitboxEnabled = false
+local HitboxSize = 10
+local EspEnabled = false
+
+-- ฟังก์ชั่นตรวจสอบบทบาท
+local function GetRole(player)
+    local backpack = player:FindFirstChild("Backpack")
+    local character = player.Character
+    
+    if (backpack and backpack:FindFirstChild("Knife")) or (character and character:FindFirstChild("Knife")) then
+        return "Murder"
+    elseif (backpack and backpack:FindFirstChild("Gun")) or (character and character:FindFirstChild("Gun")) then
+        return "Sheriff"
+    else
+        return "Innocent"
+    end
+end
+
+-- 1. Kill All (เฉพาะ Murderer)
+Tab:CreateButton({
+   Name = "ฆ่าทุกคน - القتل الجماعي (Murderer Only)",
+   Callback = function()
+       local char = LocalPlayer.Character
+       local knife = (LocalPlayer.Backpack:FindFirstChild("Knife") or (char and char:FindFirstChild("Knife")))
+       
+       if not knife then
+           Rayfield:Notify({
+               Title = "خطأ (ข้อผิดพลาด)",
+               Content = "คุณไม่ได้เป็น Murderer หรือไม่มีมีด",
+               Duration = 3
+           })
+           return
+       end
+
+       if char and char:FindFirstChild("Humanoid") then
+           if knife.Parent == LocalPlayer.Backpack then
+               knife.Parent = char
+           end
+           
+           for _, target in pairs(Players:GetPlayers()) do
+               if target ~= LocalPlayer and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and target.Character:FindFirstChild("Humanoid").Health > 0 then
+                   target.Character.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 0, -2)
+                   task.wait(0.05)
+                   if knife:FindFirstChild("Stab") then
+                       knife.Stab:FireServer()
+                   end
+               end
+           end
+       end
+   end,
+})
+
+-- 2. Hitbox
+Tab:CreateToggle({
+   Name = "ขยายขนาดตัว - حجمตัวละคร (Hitbox)",
+   CurrentValue = false,
+   Flag = "HitboxToggle",
+   Callback = function(Value)
+       HitboxEnabled = Value
+   end,
+})
+
+Tab:CreateSlider({
+   Name = "ขนาด Hitbox - حجم",
+   Range = {2, 50},
+   Increment = 1,
+   Suffix = "Studs",
+   CurrentValue = 10,
+   Flag = "HitboxSlider",
+   Callback = function(Value)
+       HitboxSize = Value
+   end,
+})
+
+-- 3. Speed
+Tab:CreateToggle({
+   Name = "เพิ่มความเร็ว - السرعة (Speed)",
+   CurrentValue = false,
+   Flag = "SpeedToggle",
+   Callback = function(Value)
+       SpeedEnabled = Value
+       if not Value and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+           LocalPlayer.Character.Humanoid.WalkSpeed = 16
+       end
+   end,
+})
+
+Tab:CreateSlider({
+   Name = "ระดับความเร็ว - ความเร็ว",
+   Range = {16, 200},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "SpeedSlider",
+   Callback = function(Value)
+       SpeedValue = Value
+   end,
+})
+
+-- 4. ESP
+Tab:CreateToggle({
+   Name = "มองทะลุ - رؤية اللاعبين (ESP)",
+   CurrentValue = false,
+   Flag = "EspToggle",
+   Callback = function(Value)
+       EspEnabled = Value
+       if not Value then
+           for _, target in pairs(Players:GetPlayers()) do
+               if target.Character and target.Character:FindFirstChild("ESP_Highlight") then
+                   target.Character.ESP_Highlight:Destroy()
+               end
+               if target.Character and target.Character:FindFirstChild("Head") and target.Character.Head:FindFirstChild("ESP_Billboard") then
+                   target.Character.Head.ESP_Billboard:Destroy()
+               end
+           end
+       end
+   end,
+})
+
+-- Loop อัปเดตระบบ Speed, Hitbox และ ESP
+RunService.RenderStepped:Connect(function()
+    -- Speed System
+    if SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = SpeedValue
+    end
+
+    -- Hitbox & ESP System
+    for _, target in pairs(Players
